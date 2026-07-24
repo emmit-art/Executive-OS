@@ -4,6 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07101f"><title>Executive OS</title>
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/chief-of-staff.css">
 </head>
 <body>
 <div id="authView" class="login card">
@@ -15,7 +16,7 @@
 
 <div id="appView" class="shell hidden">
   <header class="app-header">
-    <div><div class="eyebrow">Executive OS · 2.1 Mission Control</div><h1>Executive OS</h1><p class="welcome">Welcome back, Emmit</p></div>
+    <div><div class="eyebrow">Executive OS · 2.2 Chief of Staff</div><h1>Executive OS</h1><p class="welcome">Welcome back, Emmit</p></div>
     <div class="account-actions"><span id="sync" class="sync-dot">Synced</span><button class="icon-btn" id="signOut" aria-label="Sign out" title="Sign out">↪</button></div>
   </header>
 
@@ -82,10 +83,11 @@
 
   <button id="aiFab" class="ai-fab" aria-label="Open AI assistant">✦</button>
   <div id="aiPanel" class="ai-panel hidden">
-    <div class="ai-head"><div><div class="eyebrow">Chief of Staff</div><h2>What do you need?</h2><p class="muted">Capture a task, reminder, decision, or idea in plain language.</p></div><button id="aiClose" class="ai-close">✕</button></div>
-    <div class="ai-chips"><button class="ai-chip" data-prompt="Remind me to ">Reminder</button><button class="ai-chip" data-prompt="Add a Dom Con task to ">Dom Con</button><button class="ai-chip" data-prompt="Add a personal task to ">Personal</button><button class="ai-chip" data-prompt="Save this idea: ">Save idea</button></div>
-    <textarea id="aiInput" class="field ai-input" placeholder="Example: Remind me tomorrow at 7 PM to order the kids' school supplies."></textarea>
-    <div class="row"><button id="voiceInput" class="btn secondary" type="button" aria-label="Speak to Chief of Staff">🎙 Speak</button><button id="aiSubmit" class="btn">Process & File</button><button id="aiInboxOnly" class="btn secondary">Save to Inbox</button></div>
+    <div class="ai-head"><div><div class="eyebrow">AI Chief of Staff</div><h2>Tell me what needs to happen</h2><p class="muted">Speak or type naturally. I will classify it, organize it, and file it into the right place.</p></div><button id="aiClose" class="ai-close">✕</button></div>
+    <div class="ai-chips"><button class="ai-chip" data-prompt="Remind me to ">Reminder</button><button class="ai-chip" data-prompt="Add a Dom Con task to ">Dom Con</button><button class="ai-chip" data-prompt="I am waiting on ">Waiting on</button><button class="ai-chip" data-prompt="Save this idea: ">Save idea</button></div>
+    <textarea id="aiInput" class="field ai-input" placeholder="Example: Tomorrow at 9 AM remind me to call Ashley about the travel confirmation. Make it P1."></textarea>
+    <div id="routingPreview" class="routing-preview hidden" aria-live="polite"></div>
+    <div class="row"><button id="voiceInput" class="btn secondary" type="button" aria-label="Speak to Chief of Staff">🎙 Speak</button><button id="aiSubmit" class="btn">Review & File</button><button id="aiInboxOnly" class="btn secondary">Save Unsorted</button></div>
     <p id="voiceStatus" class="status" aria-live="polite"></p><div id="aiResult" class="ai-result hidden"></div>
   </div>
 
@@ -95,4 +97,5 @@
 </div>
 <script type="module" src="/app.js"></script>
 <script src="/voice.js" defer></script>
+<script type="module" src="/chief-of-staff.js"></script>
 </body></html>
