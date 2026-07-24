@@ -85,7 +85,8 @@
     <div class="ai-head"><div><div class="eyebrow">Chief of Staff</div><h2>What do you need?</h2><p class="muted">Capture a task, reminder, decision, or idea in plain language.</p></div><button id="aiClose" class="ai-close">✕</button></div>
     <div class="ai-chips"><button class="ai-chip" data-prompt="Remind me to ">Reminder</button><button class="ai-chip" data-prompt="Add a Dom Con task to ">Dom Con</button><button class="ai-chip" data-prompt="Add a personal task to ">Personal</button><button class="ai-chip" data-prompt="Save this idea: ">Save idea</button></div>
     <textarea id="aiInput" class="field ai-input" placeholder="Example: Remind me tomorrow at 7 PM to order the kids' school supplies."></textarea>
-    <div class="row"><button id="aiSubmit" class="btn">Process & File</button><button id="aiInboxOnly" class="btn secondary">Save to Inbox</button></div><div id="aiResult" class="ai-result hidden"></div>
+    <div class="row"><button id="voiceInput" class="btn secondary" type="button" aria-label="Speak to Chief of Staff">🎙 Speak</button><button id="aiSubmit" class="btn">Process & File</button><button id="aiInboxOnly" class="btn secondary">Save to Inbox</button></div>
+    <p id="voiceStatus" class="status" aria-live="polite"></p><div id="aiResult" class="ai-result hidden"></div>
   </div>
 
   <nav class="bottom-nav" aria-label="Mobile navigation">
@@ -93,4 +94,5 @@
   </nav>
 </div>
 <script type="module" src="/app.js"></script>
+<script src="/voice.js" defer></script>
 </body></html>
