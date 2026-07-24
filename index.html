@@ -15,7 +15,7 @@
 
 <div id="appView" class="shell hidden">
   <header class="app-header">
-    <div><div class="eyebrow">Executive OS · 2.0 Alpha</div><h1>Executive OS</h1><p class="welcome">Welcome back, Emmit</p></div>
+    <div><div class="eyebrow">Executive OS · 2.1 Mission Control</div><h1>Executive OS</h1><p class="welcome">Welcome back, Emmit</p></div>
     <div class="account-actions"><span id="sync" class="sync-dot">Synced</span><button class="icon-btn" id="signOut" aria-label="Sign out" title="Sign out">↪</button></div>
   </header>
 
@@ -26,21 +26,41 @@
   <main>
   <section id="home" class="section active">
     <div class="grid">
-      <div class="card hero s8">
-        <div class="hero-top"><div><div class="eyebrow" id="daypart">Good morning</div><div class="date" id="dateText"></div></div><span class="today-chip">Today</span></div>
-        <div class="mission-block"><div class="eyebrow">Today's Mission</div><input id="mission" class="mission-input" placeholder="Set the one outcome that matters most"><div class="mission-actions"><button class="btn compact" id="saveMission">Save Mission</button><span class="status" id="missionSaved"></span></div></div>
+      <div class="card command-brief s8">
+        <div class="hero-top"><div><div class="eyebrow" id="daypart">Good morning</div><h2 class="brief-title">Your executive brief</h2><div class="date" id="dateText"></div></div><span class="today-chip">Live</span></div>
+        <div id="briefing" class="briefing brief-list"></div>
+        <button class="text-action" data-ai-open>Ask your Chief of Staff →</button>
       </div>
-      <div class="card score-card s4"><div class="eyebrow">Executive Score</div><div class="score-layout"><div id="scoreRing" class="score-ring" style="--score:75"><strong id="scoreValue">75</strong></div><div><strong id="scoreLabel" class="score-label">Strong</strong><p class="muted score-copy">Based on overdue work, follow-ups, and completion.</p></div></div></div>
 
-      <div class="card briefing-card s7"><div class="eyebrow">AI Executive Briefing</div><h2>Your leverage today</h2><div id="briefing" class="briefing"></div><button class="text-action" data-ai-open>Talk to your assistant →</button></div>
-      <div class="card s5"><div class="eyebrow">Needs Attention</div><div class="attn"><span>Overdue tasks</span><strong id="overdueCount">0</strong></div><div class="attn"><span>Open follow-ups</span><strong id="waitingCount">0</strong></div><div class="attn"><span>Due today</span><strong id="dueTodayCount">0</strong></div><div class="attn"><span>Unscheduled work</span><strong id="unscheduledCount">0</strong></div></div>
+      <div class="card score-card s4"><div class="eyebrow">Executive Score</div><div class="score-layout"><div id="scoreRing" class="score-ring" style="--score:75"><strong id="scoreValue">75</strong></div><div><strong id="scoreLabel" class="score-label">Strong</strong><p class="muted score-copy">Your current execution health.</p></div></div><div class="score-stats"><span><b id="overdueCount">0</b> overdue</span><span><b id="waitingCount">0</b> waiting</span><span><b id="dueTodayCount">0</b> today</span></div></div>
 
-      <div class="card s7"><div class="section-head"><div><div class="eyebrow">Top 3 Priorities</div><h2>Highest-impact work</h2></div><button class="text-action" data-tab="tasks">View all</button></div><div id="topTasks"></div></div>
-      <div class="card s5"><div class="section-head"><div><div class="eyebrow">Today's Schedule</div><h2>Calendar</h2></div><button id="refreshCalendar" class="btn secondary compact">Refresh</button></div><div id="calendarStatus" class="status"></div><div id="scheduleList"></div><p class="muted footnote">Family iCloud events sync read-only.</p></div>
+      <div class="card next-action s7">
+        <div class="eyebrow">Recommended Next Action</div>
+        <div id="nextActionContent"></div>
+        <div class="action-buttons"><button class="btn" id="startFocus">Start Focus Session</button><button class="btn secondary" data-tab="tasks">View Tasks</button></div>
+      </div>
 
-      <div class="card s12"><div class="section-head"><div><div class="eyebrow">Company Snapshot</div><h2>Across your world</h2></div><button class="text-action" data-tab="companies">Open companies</button></div><div class="kpi-grid"><div class="kpi"><span>Dom Con</span><strong id="domOpen">0</strong><small>open items</small></div><div class="kpi"><span>ELI Global</span><strong id="eliOpen">0</strong><small>open items</small></div><div class="kpi"><span>Personal</span><strong id="personalOpen">0</strong><small>open items</small></div><div class="kpi"><span>Second Brain</span><strong id="notesCount">0</strong><small>notes captured</small></div></div></div>
+      <div class="card mission-card s5">
+        <div class="eyebrow">Today's Mission</div><h2>Define the win</h2>
+        <input id="mission" class="mission-input" placeholder="Set the one outcome that matters most">
+        <div class="mission-actions"><button class="btn compact" id="saveMission">Save Mission</button><span class="status" id="missionSaved"></span></div>
+      </div>
 
-      <div class="card quick-card s12"><div class="eyebrow">Quick Capture</div><div class="quick"><input id="quickTitle" class="field wide" placeholder="What needs to be done?"><select id="quickArea" class="field"><option value="dom_con">Dom Con</option><option value="personal">Personal</option><option value="eli_global">ELI Global</option></select><select id="quickPriority" class="field"><option value="p1">P1</option><option value="p2">P2</option><option value="p3" selected>P3</option><option value="p4">P4</option></select><button class="btn" id="quickAdd">Add Task</button></div></div>
+      <div class="card s7"><div class="section-head"><div><div class="eyebrow">Today's Schedule</div><h2>What is ahead</h2></div><button id="refreshCalendar" class="btn secondary compact">Refresh</button></div><div id="calendarStatus" class="status"></div><div id="scheduleList"></div><p class="muted footnote">Family iCloud events sync read-only.</p></div>
+
+      <div class="card attention-card s5"><div class="eyebrow">Needs Attention</div><div class="attn"><span>Overdue tasks</span><strong id="overdueCountDetail">0</strong></div><div class="attn"><span>Open follow-ups</span><strong id="waitingCountDetail">0</strong></div><div class="attn"><span>Due today</span><strong id="dueTodayCountDetail">0</strong></div><div class="attn"><span>Unscheduled work</span><strong id="unscheduledCount">0</strong></div></div>
+
+      <div class="card s12"><div class="section-head"><div><div class="eyebrow">Company Health</div><h2>Across your world</h2></div><button class="text-action" data-tab="companies">Open companies</button></div><div class="company-health-grid">
+        <button class="health-card" data-tab="companies"><span class="health-top"><b>Dom Con</b><i id="domHealthDot" class="health-dot"></i></span><strong id="domOpen">0</strong><small>open items</small><span id="domHealthText" class="health-status">Healthy</span></button>
+        <button class="health-card" data-tab="companies"><span class="health-top"><b>ELI Global</b><i id="eliHealthDot" class="health-dot"></i></span><strong id="eliOpen">0</strong><small>open items</small><span id="eliHealthText" class="health-status">Healthy</span></button>
+        <button class="health-card" data-tab="tasks"><span class="health-top"><b>Personal</b><i class="health-dot"></i></span><strong id="personalOpen">0</strong><small>open items</small><span class="health-status">On track</span></button>
+        <button class="health-card" data-tab="knowledge"><span class="health-top"><b>Second Brain</b><i class="health-dot"></i></span><strong id="notesCount">0</strong><small>notes captured</small><span class="health-status">Growing</span></button>
+      </div></div>
+
+      <div class="card s7"><div class="section-head"><div><div class="eyebrow">Executive Timeline</div><h2>Recent activity</h2></div></div><div id="timelineList" class="timeline"></div></div>
+      <div class="card s5"><div class="section-head"><div><div class="eyebrow">Top Priorities</div><h2>Highest-impact work</h2></div><button class="text-action" data-tab="tasks">View all</button></div><div id="topTasks"></div></div>
+
+      <div class="card quick-card s12"><div class="eyebrow">Universal Quick Capture</div><div class="quick"><input id="quickTitle" class="field wide" placeholder="What needs to be done?"><select id="quickArea" class="field"><option value="dom_con">Dom Con</option><option value="personal">Personal</option><option value="eli_global">ELI Global</option></select><select id="quickPriority" class="field"><option value="p1">P1</option><option value="p2">P2</option><option value="p3" selected>P3</option><option value="p4">P4</option></select><button class="btn" id="quickAdd">Add Task</button></div></div>
     </div>
   </section>
 
@@ -55,6 +75,10 @@
   <section id="analytics" class="section"><div class="page-title"><div class="eyebrow">Intelligence</div><h2>Analytics</h2></div><div class="card"><h3>Executive performance</h3><p class="muted">Completion trends, company metrics, and review history will appear here as data builds.</p></div></section>
   <section id="more" class="section"><div class="page-title"><div class="eyebrow">Executive OS</div><h2>More</h2></div><div class="more-grid"><button class="more-link" data-tab="waiting"><span>👥</span><div><strong>Waiting On</strong><small>People and follow-ups</small></div></button><button class="more-link" data-tab="knowledge"><span>🧠</span><div><strong>Second Brain</strong><small>Notes and decisions</small></div></button><button class="more-link" data-tab="goals"><span>🎯</span><div><strong>Goals</strong><small>Outcomes and milestones</small></div></button><button class="more-link" data-tab="analytics"><span>📊</span><div><strong>Analytics</strong><small>Performance intelligence</small></div></button><button class="more-link" id="moreSignOut"><span>↪</span><div><strong>Sign Out</strong><small id="userEmail"></small></div></button></div></section>
   </main>
+
+  <div id="focusMode" class="focus-mode hidden">
+    <div class="focus-shell"><div class="focus-head"><div><div class="eyebrow">Focus Session</div><span class="focus-live">● Active</span></div><button id="closeFocus" class="ai-close">✕</button></div><div class="focus-body"><p class="muted">Current objective</p><h2 id="focusTitle">Your next action</h2><div id="focusMeta" class="focus-meta"></div><div id="focusTimer" class="focus-timer">25:00</div><div class="focus-controls"><button id="pauseFocus" class="btn secondary">Pause</button><button id="completeFocus" class="btn">Complete Task</button></div><textarea id="focusNotes" class="field" placeholder="Session notes..."></textarea></div></div>
+  </div>
 
   <button id="aiFab" class="ai-fab" aria-label="Open AI assistant">✦</button>
   <div id="aiPanel" class="ai-panel hidden">
