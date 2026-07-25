@@ -1,4 +1,5 @@
 import('/notifications.js');
+import('/structured-display.js');
 (() => {
   const button = document.getElementById("voiceInput");
   const input = document.getElementById("aiInput");
