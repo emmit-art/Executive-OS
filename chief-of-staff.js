@@ -16,3 +16,4 @@ import './delegation-center.js';
 import './relationship-intelligence.js';
 import './executive-memory.js';
 import './executive-memory-capture.js';
+import './decision-intelligence.js';
