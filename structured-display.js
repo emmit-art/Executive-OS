@@ -5,9 +5,11 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&
 const prettyTime=value=>value?new Date(value).toLocaleString([],{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):null;
 let taskCache=[],busy=false,timer=null;
 
-function subjectOf(task){return task.executive_context?.subject||null}
-function typeOf(task){return task.executive_context?.object_type||task.context_type||"task"}
-function iconOf(type){return({call:"📞",meeting:"📅",purchase:"🛒",decision:"◆",project:"▦",task:"✓"})[type]||"✓"}
+function contextOf(task){return task.executive_context||{}}
+function subjectOf(task){return contextOf(task).subject||null}
+function typeOf(task){return contextOf(task).object_type||task.context_type||"task"}
+function iconOf(type){return({call:"📞",meeting:"📅",waiting:"↗",purchase:"🛒",decision:"◆",idea:"💡",project:"▦",task:"✓"})[type]||"✓"}
+function labelOf(type){return({call:"Call",meeting:"Meeting",waiting:"Waiting On",purchase:"Purchase",decision:"Decision",idea:"Idea",project:"Project",task:"Task"})[type]||type}
 function reasonFor(task){
   const reasons=[];
   if(task.reason)reasons.push(task.reason);
@@ -15,57 +17,47 @@ function reasonFor(task){
   if(task.reminder_at){const hours=(new Date(task.reminder_at)-new Date())/3600000;if(hours>=0&&hours<=24)reasons.push("The reminder is within the next 24 hours.")}
   if(task.estimated_minutes&&task.estimated_minutes<=15)reasons.push(`It should take about ${task.estimated_minutes} minutes.`);
   if(task.related_person)reasons.push(`${task.related_person} is connected to this commitment.`);
-  return [...new Set(reasons)];
+  return[...new Set(reasons)];
 }
 function detailMarkup(task){
-  const items=[];
-  const type=typeOf(task),subject=subjectOf(task);
-  if(type!=="task")items.push(`<span class="object-badge">${iconOf(type)} ${esc(type.replace(/_/g," "))}</span>`);
+  const items=[],type=typeOf(task),subject=subjectOf(task),ctx=contextOf(task);
+  if(type!=="task")items.push(`<span class="object-badge">${iconOf(type)} ${esc(labelOf(type))}</span>`);
   if(task.reminder_at)items.push(`<span><b>Reminder</b>${esc(prettyTime(task.reminder_at))}</span>`);
   if(task.scheduled_start)items.push(`<span><b>Start</b>${esc(prettyTime(task.scheduled_start))}</span>`);
   if(task.due_at)items.push(`<span><b>Due</b>${esc(prettyTime(task.due_at))}</span>`);
   if(task.related_person)items.push(`<span><b>Person</b>${esc(task.related_person)}</span>`);
-  if(subject)items.push(`<span><b>Topic</b>${esc(subject)}</span>`);
+  if(subject)items.push(`<span><b>${type==="purchase"?"Item":"Topic"}</b>${esc(subject)}</span>`);
+  if(ctx.store)items.push(`<span><b>Store</b>${esc(ctx.store)}</span>`);
+  if(ctx.location)items.push(`<span><b>Location</b>${esc(ctx.location)}</span>`);
+  if(Array.isArray(ctx.options)&&ctx.options.length)items.push(`<span class="wide"><b>Options</b>${esc(ctx.options.join(" · "))}</span>`);
+  if(ctx.outcome)items.push(`<span class="wide"><b>Outcome</b>${esc(ctx.outcome)}</span>`);
   if(task.reason)items.push(`<span class="wide"><b>Why</b>${esc(task.reason)}</span>`);
   if(task.estimated_minutes)items.push(`<span><b>Time</b>${esc(task.estimated_minutes)} min</span>`);
   return items.length?`<div class="executive-details">${items.join("")}</div>`:"";
 }
 async function loadTasks(){
   if(busy)return;busy=true;
-  try{
-    const{data:{session}}=await sb.auth.getSession();
-    if(!session?.user)return;
-    const{data,error}=await sb.from("tasks").select("*").neq("status","cancelled").order("created_at",{ascending:false});
-    if(error)throw error;taskCache=data||[];
-    enhance();
-  }catch(error){console.error("Structured display:",error)}finally{busy=false}
+  try{const{data:{session}}=await sb.auth.getSession();if(!session?.user)return;const{data,error}=await sb.from("tasks").select("*").neq("status","cancelled").order("created_at",{ascending:false});if(error)throw error;taskCache=data||[];enhance()}catch(error){console.error("Structured display:",error)}finally{busy=false}
 }
 function matchTask(title){return taskCache.find(t=>String(t.title).trim()===title.trim())}
-function enhanceTaskCards(){
-  document.querySelectorAll(".task").forEach(card=>{
-    const titleEl=card.querySelector(".task-title");if(!titleEl)return;
-    const task=matchTask(titleEl.textContent||"");if(!task)return;
-    card.querySelector(".executive-details")?.remove();
-    const html=detailMarkup(task);if(html)titleEl.closest(".task-main")?.insertAdjacentHTML("beforeend",html);
-  });
-}
+function enhanceTaskCards(){document.querySelectorAll(".task").forEach(card=>{const titleEl=card.querySelector(".task-title");if(!titleEl)return;const task=matchTask(titleEl.textContent||"");if(!task)return;card.querySelector(".executive-details")?.remove();const html=detailMarkup(task);if(html)titleEl.closest(".task-main")?.insertAdjacentHTML("beforeend",html)})}
 function enhanceBriefing(){
   const briefing=document.getElementById("briefing");if(!briefing)return;
   const recommendation=[...briefing.querySelectorAll("strong")].find(el=>matchTask(el.textContent||""));
   const task=recommendation?matchTask(recommendation.textContent||""):taskCache.filter(t=>!["completed","cancelled"].includes(t.status)).sort((a,b)=>(Number(b.ai_priority_score)||0)-(Number(a.ai_priority_score)||0))[0];
-  briefing.querySelector(".executive-why-line")?.remove();
-  if(!task)return;
+  briefing.querySelector(".executive-why-line")?.remove();if(!task)return;
   const reasons=reasonFor(task);if(!reasons.length)return;
   briefing.insertAdjacentHTML("beforeend",`<div class="brief-line executive-why-line"><span class="brief-icon">?</span><span><strong>Why this first:</strong> ${esc(reasons[0])}</span></div>`);
 }
 function enhanceNextAction(){
   const box=document.getElementById("nextActionContent");if(!box)return;
-  const title=box.querySelector("h2")?.textContent||"";const task=matchTask(title);if(!task)return;
-  box.querySelector(".executive-next-context")?.remove();
-  const reasons=reasonFor(task),subject=subjectOf(task);
-  const pieces=[];
-  if(subject)pieces.push(`<p><b>Topic:</b> ${esc(subject)}</p>`);
+  const title=box.querySelector("h2")?.textContent||"",task=matchTask(title);if(!task)return;
+  box.querySelector(".executive-next-context")?.remove();const reasons=reasonFor(task),subject=subjectOf(task),ctx=contextOf(task),pieces=[];
+  pieces.push(`<p><b>Type:</b> ${iconOf(typeOf(task))} ${esc(labelOf(typeOf(task)))}</p>`);
+  if(subject)pieces.push(`<p><b>${typeOf(task)==="purchase"?"Item":"Topic"}:</b> ${esc(subject)}</p>`);
   if(task.related_person)pieces.push(`<p><b>Person:</b> ${esc(task.related_person)}</p>`);
+  if(ctx.store)pieces.push(`<p><b>Store:</b> ${esc(ctx.store)}</p>`);
+  if(ctx.location)pieces.push(`<p><b>Location:</b> ${esc(ctx.location)}</p>`);
   if(task.reminder_at)pieces.push(`<p><b>Reminder:</b> ${esc(prettyTime(task.reminder_at))}</p>`);
   if(reasons.length)pieces.push(`<p><b>Why this first:</b> ${esc(reasons.join(" "))}</p>`);
   if(pieces.length)box.insertAdjacentHTML("beforeend",`<div class="executive-next-context">${pieces.join("")}</div>`);
