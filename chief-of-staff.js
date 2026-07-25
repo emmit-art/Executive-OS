@@ -18,3 +18,4 @@ import './executive-memory.js';
 import './executive-memory-capture.js';
 import './decision-intelligence.js';
 import './simple-executive-experience.js';
+import './restored-executive-essentials.js';
