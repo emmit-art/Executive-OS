@@ -17,3 +17,4 @@ import './relationship-intelligence.js';
 import './executive-memory.js';
 import './executive-memory-capture.js';
 import './decision-intelligence.js';
+import './simple-executive-experience.js';
