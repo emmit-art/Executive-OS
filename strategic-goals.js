@@ -3,7 +3,7 @@ import {createClient} from "https://esm.sh/@supabase/supabase-js@2";
 const sb=createClient("https://hnvvvdibncwlplweeuod.supabase.co","sb_publishable_J-iF_-7VvAfXQKITPiNM_Q_cJUlokA1",{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage}});
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const areaLabel=a=>({dom_con:"Dom Con",eli_global:"ELI Global",personal:"Personal"}[a]||a||"Personal");
-let session=null,goals=[],tasks=[],workspaceId=null,editingId=null,linkingGoalId=null;
+let session=null,goals=[],tasks=[],workspaceId=null,editingId=null,linkingGoalId=null,taskLinkDraft=new Set();
 
 function decodeGoal(note){try{const d=JSON.parse(note.body||"{}");return{id:note.id,title:note.title||"Untitled goal",area:d.area||"personal",target:d.target||"",deadline:d.deadline||null,progress:Math.max(0,Math.min(100,Number(d.progress)||0)),status:d.status||"active",milestones:Array.isArray(d.milestones)?d.milestones:[],created_at:note.created_at}}catch{return null}}
 function encodeGoal(g){return JSON.stringify({area:g.area,target:g.target,deadline:g.deadline,progress:g.progress,status:g.status,milestones:g.milestones||[]})}
@@ -31,14 +31,14 @@ function renderTaskPicker(){
   const goal=goals.find(g=>g.id===linkingGoalId),box=document.getElementById("goalTaskPicker");if(!goal||!box)return;
   const q=document.getElementById("goalTaskSearch").value.trim().toLowerCase();
   const visible=tasks.filter(t=>!["completed","cancelled"].includes(t.status)&&taskMatchesSearch(t,q));
-  box.innerHTML=visible.length?visible.map(t=>{const current=taskGoalId(t),checked=current===goal.id||(!current&&String(t.project_name||"").toLowerCase()===goal.title.toLowerCase()),other=current&&current!==goal.id?goals.find(g=>g.id===current):null;return `<label class="goal-task-row"><input type="checkbox" data-task-link="${t.id}" ${checked?"checked":""}><div><strong>${esc(t.title)}</strong><small>${esc(String(t.priority||"p3").toUpperCase())}${other?` · Currently linked to ${esc(other.title)}`:""}</small></div></label>`}).join(""):`<div class="goal-empty">No matching active tasks.</div>`;
+  box.innerHTML=visible.length?visible.map(t=>{const current=taskGoalId(t),checked=taskLinkDraft.has(t.id),other=current&&current!==goal.id?goals.find(g=>g.id===current):null;return `<label class="goal-task-row"><input type="checkbox" data-task-link="${t.id}" ${checked?"checked":""} onchange="window.stageGoalTaskLink('${t.id}',this.checked)"><div><strong>${esc(t.title)}</strong><small>${esc(String(t.priority||"p3").toUpperCase())}${other?` · Currently linked to ${esc(other.title)}`:""}</small></div></label>`}).join(""):`<div class="goal-empty">No matching active tasks.</div>`;
 }
-function closeTaskPicker(){linkingGoalId=null;document.getElementById("goalTaskModal")?.classList.add("hidden")}
-window.openGoalTaskPicker=id=>{const g=goals.find(x=>x.id===id);if(!g)return;linkingGoalId=id;document.getElementById("goalTaskModalTitle").textContent=`Link tasks to ${g.title}`;document.getElementById("goalTaskSearch").value="";document.getElementById("goalTaskModal").classList.remove("hidden");renderTaskPicker()};
+window.stageGoalTaskLink=(id,checked)=>{if(checked)taskLinkDraft.add(id);else taskLinkDraft.delete(id)};
+function closeTaskPicker(){linkingGoalId=null;taskLinkDraft=new Set();document.getElementById("goalTaskModal")?.classList.add("hidden")}
+window.openGoalTaskPicker=id=>{const g=goals.find(x=>x.id===id);if(!g)return;linkingGoalId=id;taskLinkDraft=new Set(linkedTasks(g).filter(t=>!["completed","cancelled"].includes(t.status)).map(t=>t.id));document.getElementById("goalTaskModalTitle").textContent=`Link tasks to ${g.title}`;document.getElementById("goalTaskSearch").value="";document.getElementById("goalTaskModal").classList.remove("hidden");renderTaskPicker()};
 async function saveTaskLinks(){
   const goal=goals.find(g=>g.id===linkingGoalId);if(!goal)return;
-  const selected=new Set([...document.querySelectorAll("[data-task-link]:checked")].map(x=>x.dataset.taskLink));
-  const updates=tasks.filter(t=>!["completed","cancelled"].includes(t.status)).map(t=>{const current=taskGoalId(t),legacy=!current&&String(t.project_name||"").toLowerCase()===goal.title.toLowerCase(),shouldLink=selected.has(t.id),wasLinked=current===goal.id||legacy;if(shouldLink===wasLinked)return null;const ctx={...(t.executive_context||{})};if(shouldLink){ctx.goal_id=goal.id;ctx.goal_title=goal.title}else{delete ctx.goal_id;delete ctx.goal_title}return sb.from("tasks").update({executive_context:ctx}).eq("owner_id",session.user.id).eq("id",t.id)}).filter(Boolean);
+  const updates=tasks.filter(t=>!["completed","cancelled"].includes(t.status)).map(t=>{const current=taskGoalId(t),legacy=!current&&String(t.project_name||"").toLowerCase()===goal.title.toLowerCase(),shouldLink=taskLinkDraft.has(t.id),wasLinked=current===goal.id||legacy;if(shouldLink===wasLinked)return null;const ctx={...(t.executive_context||{})};if(shouldLink){ctx.goal_id=goal.id;ctx.goal_title=goal.title}else{delete ctx.goal_id;delete ctx.goal_title}return sb.from("tasks").update({executive_context:ctx}).eq("owner_id",session.user.id).eq("id",t.id)}).filter(Boolean);
   const results=await Promise.all(updates),failed=results.find(r=>r.error);if(failed?.error){alert(failed.error.message);return}closeTaskPicker();await load();
 }
 
