@@ -6,3 +6,4 @@ import './sync-controller.js';
 import './kpi-center.js';
 import './executive-graph.js';
 import './executive-inbox.js';
+import './executive-brain.js';
