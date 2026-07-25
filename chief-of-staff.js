@@ -10,3 +10,5 @@ import './executive-brain.js';
 import './dynamic-executive-brief.js';
 import './executive-command-center.js';
 import './predictive-intelligence.js';
+import './execution-engine.js';
+import './executive-queue.js';
