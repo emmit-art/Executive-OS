@@ -1,6 +1,4 @@
 import('/notifications.js');
-import('/timing-enhancer.js');
-import('/executive-behavior.js');
 (() => {
   const button = document.getElementById("voiceInput");
   const input = document.getElementById("aiInput");
