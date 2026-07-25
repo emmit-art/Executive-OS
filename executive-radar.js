@@ -1,0 +1,47 @@
+import {createClient} from "https://esm.sh/@supabase/supabase-js@2";
+const sb=createClient("https://hnvvvdibncwlplweeuod.supabase.co","sb_publishable_J-iF_-7VvAfXQKITPiNM_Q_cJUlokA1",{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage}});
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+const now=()=>new Date();
+let session=null,tasks=[],waiting=[];
+
+function scoreTask(task){
+  let score=0;const reasons=[];const priority={p1:40,p2:28,p3:16,p4:6}[task.priority]||16;
+  score+=priority;reasons.push(`${String(task.priority||"p3").toUpperCase()} priority +${priority}`);
+  const due=task.due_at?new Date(task.due_at):null;
+  if(due){const hours=(due-now())/3600000;if(hours<0){score+=42;reasons.push("Overdue +42")}else if(hours<=12){score+=34;reasons.push("Due within 12 hours +34")}else if(hours<=24){score+=28;reasons.push("Due within 24 hours +28")}else if(hours<=72){score+=16;reasons.push("Due within 3 days +16")}}
+  if(task.reminder_at){const hours=(new Date(task.reminder_at)-now())/3600000;if(hours>=0&&hours<=24){score+=12;reasons.push("Reminder within 24 hours +12")}}
+  if(task.related_person){score+=8;reasons.push("Commitment involves another person +8")}
+  if(task.reason){score+=6;reasons.push("Has an explicit business reason +6")}
+  if(task.estimated_minutes&&task.estimated_minutes<=10){score+=13;reasons.push("Quick win under 10 minutes +13")}else if(task.estimated_minutes&&task.estimated_minutes<=30){score+=7;reasons.push("Can be completed in 30 minutes +7")}
+  const ageDays=(now()-new Date(task.created_at||now()))/86400000;if(ageDays>=7){score+=8;reasons.push("Open for at least 7 days +8")}else if(ageDays>=3){score+=4;reasons.push("Open for at least 3 days +4")}
+  if(task.blocking){score+=15;reasons.push("Blocks other work +15")}
+  return{score:Math.min(100,Math.round(score)),reasons};
+}
+function bucket(task,scored){
+  const due=task.due_at?new Date(task.due_at):null,hours=due?(due-now())/3600000:null;
+  if((hours!==null&&hours<=24)||scored.score>=78)return"critical";
+  if((hours!==null&&hours<=72)||scored.score>=58)return"risk";
+  if(task.estimated_minutes&&task.estimated_minutes<=10)return"quick";
+  return"attention";
+}
+function fmtDate(v){return v?new Date(v).toLocaleString([],{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"No deadline"}
+function install(){
+  if(document.getElementById("radar"))return;
+  const desktop=document.querySelector(".desktop-nav");if(desktop){const b=document.createElement("button");b.dataset.tab="radar";b.textContent="Radar";desktop.prepend(b)}
+  const more=document.querySelector("#more .more-grid");if(more){const b=document.createElement("button");b.className="more-link";b.dataset.tab="radar";b.innerHTML="<span>◉</span><div><strong>Executive Radar</strong><small>Priorities, risk, and quick wins</small></div>";more.prepend(b)}
+  const main=document.querySelector("main"),section=document.createElement("section");section.id="radar";section.className="section";section.innerHTML=`<div class="page-title"><div class="eyebrow">Executive Reasoning</div><h2>Executive Radar</h2><p class="task-meta">Live priorities ranked by urgency, impact, effort, age, and commitments.</p></div><div id="radarSummary" class="radar-summary"></div><div class="radar-grid"><div class="radar-column critical"><div class="radar-heading"><span>🔴</span><div><strong>Critical Today</strong><small>Cannot safely slip</small></div><b id="criticalCount">0</b></div><div id="criticalRadar"></div></div><div class="radar-column risk"><div class="radar-heading"><span>🟠</span><div><strong>At Risk</strong><small>Likely to become a problem</small></div><b id="riskCount">0</b></div><div id="riskRadar"></div></div><div class="radar-column attention"><div class="radar-heading"><span>🟡</span><div><strong>Needs Attention</strong><small>Important, not yet urgent</small></div><b id="attentionCount">0</b></div><div id="attentionRadar"></div></div><div class="radar-column quick"><div class="radar-heading"><span>🟢</span><div><strong>Quick Wins</strong><small>Finish in 10 minutes</small></div><b id="quickCount">0</b></div><div id="quickRadar"></div></div><div class="radar-column waiting"><div class="radar-heading"><span>🔵</span><div><strong>Waiting On</strong><small>Blocked by someone else</small></div><b id="waitingRadarCount">0</b></div><div id="waitingRadar"></div></div></div>`;main.prepend(section);
+  document.querySelectorAll('[data-tab="radar"]').forEach(b=>b.addEventListener("click",switchRadar));
+  const style=document.createElement("style");style.textContent=`.radar-summary{margin:0 0 14px;padding:14px 16px;border:1px solid rgba(125,170,230,.2);border-radius:16px;background:rgba(35,76,138,.12)}.radar-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.radar-column{border:1px solid rgba(125,170,230,.16);border-radius:18px;padding:14px;background:rgba(8,25,50,.35)}.radar-column.waiting{grid-column:1/-1}.radar-heading{display:flex;align-items:center;gap:10px;margin-bottom:10px}.radar-heading>span{font-size:1.15rem}.radar-heading>div{flex:1}.radar-heading strong,.radar-heading small{display:block}.radar-heading small{color:var(--muted,#9eb1cc);margin-top:2px}.radar-heading>b{font-size:.8rem;padding:5px 9px;border-radius:999px;background:rgba(120,160,220,.12)}.radar-item{padding:12px;margin-top:8px;border-radius:13px;border:1px solid rgba(125,170,230,.13)}.radar-item-head{display:flex;gap:10px;align-items:flex-start}.radar-item-head strong{flex:1}.radar-score{font-size:.75rem;padding:4px 7px;border-radius:999px;background:rgba(87,139,225,.16);color:#cfe0ff}.radar-meta{font-size:.76rem;color:var(--muted,#9eb1cc);margin-top:5px}.radar-why{margin-top:8px}.radar-why summary{cursor:pointer;font-size:.76rem;color:#a9c7f7}.radar-why ul{margin:8px 0 0;padding-left:18px;font-size:.76rem;color:var(--muted,#9eb1cc)}.radar-empty{padding:12px;color:var(--muted,#9eb1cc);font-size:.82rem}@media(max-width:720px){.radar-grid{grid-template-columns:1fr}.radar-column.waiting{grid-column:auto}}`;document.head.appendChild(style)
+}
+function switchRadar(){document.querySelectorAll(".section").forEach(x=>x.classList.remove("active"));document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x.dataset.tab==="radar"));document.getElementById("radar")?.classList.add("active");window.scrollTo({top:0,behavior:"smooth"});load()}
+function card(task,scored){return `<div class="radar-item"><div class="radar-item-head"><strong>${esc(task.title)}</strong><span class="radar-score">${scored.score}</span></div><div class="radar-meta">${esc(fmtDate(task.due_at))}${task.related_person?` · ${esc(task.related_person)}`:""}${task.estimated_minutes?` · ${esc(task.estimated_minutes)} min`:""}</div><details class="radar-why"><summary>Why this score?</summary><ul>${scored.reasons.map(r=>`<li>${esc(r)}</li>`).join("")}</ul></details></div>`}
+function render(){
+  const active=tasks.filter(t=>!["completed","cancelled"].includes(t.status));const groups={critical:[],risk:[],attention:[],quick:[]};
+  active.map(t=>({task:t,scored:scoreTask(t)})).sort((a,b)=>b.scored.score-a.scored.score).forEach(x=>groups[bucket(x.task,x.scored)].push(x));
+  for(const key of Object.keys(groups)){const el=document.getElementById(`${key}Radar`),count=document.getElementById(`${key}Count`);if(count)count.textContent=groups[key].length;if(el)el.innerHTML=groups[key].length?groups[key].map(x=>card(x.task,x.scored)).join(""):`<div class="radar-empty">Nothing here right now.</div>`}
+  const waitEl=document.getElementById("waitingRadar"),waitCount=document.getElementById("waitingRadarCount");if(waitCount)waitCount.textContent=waiting.length;if(waitEl)waitEl.innerHTML=waiting.length?waiting.map(w=>`<div class="radar-item"><div class="radar-item-head"><strong>${esc(w.item)}</strong></div><div class="radar-meta">Waiting on ${esc(w.person_or_company)}${w.follow_up_at?` · Follow up ${esc(fmtDate(w.follow_up_at))}`:""}</div></div>`).join(""):`<div class="radar-empty">Nothing is currently blocked.</div>`;
+  const top=[...groups.critical,...groups.risk,...groups.attention,...groups.quick][0],summary=document.getElementById("radarSummary");if(summary)summary.innerHTML=top?`<strong>Recommended first move:</strong> ${esc(top.task.title)} <span class="radar-score">${top.scored.score}</span><div class="radar-meta">${esc(top.scored.reasons[0]||"Highest current priority")}</div>`:"Your active work is clear. Use the available time for strategic planning.";
+}
+async function load(){if(!session?.user)return;const [tr,wr]=await Promise.all([sb.from("tasks").select("*").eq("owner_id",session.user.id).neq("status","cancelled").order("created_at",{ascending:false}),sb.from("waiting_on").select("*").eq("owner_id",session.user.id).is("resolved_at",null).order("created_at",{ascending:false})]);if(tr.error||wr.error){console.error("Executive Radar",tr.error||wr.error);return}tasks=tr.data||[];waiting=wr.data||[];render()}
+async function start(){const{data:{session:s}}=await sb.auth.getSession();session=s;if(!session?.user)return;install();await load();setInterval(load,60000)}
+sb.auth.onAuthStateChange((_e,s)=>{session=s;if(s?.user)setTimeout(start,250)});if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();
