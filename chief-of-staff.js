@@ -3,3 +3,4 @@ import './executive-radar.js';
 import './strategic-goals.js';
 import './weekly-review.js';
 import './sync-controller.js';
+import './kpi-center.js';
