@@ -14,3 +14,5 @@ import './execution-engine.js';
 import './executive-queue.js';
 import './delegation-center.js';
 import './relationship-intelligence.js';
+import './executive-memory.js';
+import './executive-memory-capture.js';
