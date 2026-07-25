@@ -8,3 +8,4 @@ import './executive-graph.js';
 import './executive-inbox.js';
 import './executive-brain.js';
 import './dynamic-executive-brief.js';
+import './executive-command-center.js';
