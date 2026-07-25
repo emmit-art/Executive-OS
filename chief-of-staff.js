@@ -1,3 +1,4 @@
 import './executive-object-v2.js';
 import './executive-radar.js';
 import './strategic-goals.js';
+import './weekly-review.js';
