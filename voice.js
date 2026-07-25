@@ -1,7 +1,48 @@
-import('/notifications.js');
-import('/structured-display.js');
-import('/executive-memory.js');
-import('/executive-radar.js');
+// Fail-safe visual and navigation bootstrap. This file is loaded directly by index.html,
+// so the app remains usable even when an optional Chief of Staff module fails.
+(() => {
+  const themeId = 'glass-steel-direct';
+  if (!document.getElementById(themeId)) {
+    const link = document.createElement('link');
+    link.id = themeId;
+    link.rel = 'stylesheet';
+    link.href = '/glass-steel.css?v=20260725-2';
+    document.head.appendChild(link);
+  }
+
+  const activate = tab => {
+    if (!tab || !document.getElementById(tab)) return;
+    document.querySelectorAll('.section').forEach(section => section.classList.toggle('active', section.id === tab));
+    document.querySelectorAll('[data-tab],[data-simple-tab]').forEach(button => {
+      const target = button.dataset.simpleTab || button.dataset.tab;
+      button.classList.toggle('active', target === tab);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  document.addEventListener('click', event => {
+    const ai = event.target.closest('[data-ai-open],.ai-nav,#aiFab');
+    if (ai) {
+      event.preventDefault();
+      document.getElementById('aiPanel')?.classList.remove('hidden');
+      return;
+    }
+    const nav = event.target.closest('[data-simple-tab],[data-tab]');
+    if (!nav) return;
+    const tab = nav.dataset.simpleTab || nav.dataset.tab;
+    if (!document.getElementById(tab)) return;
+    event.preventDefault();
+    activate(tab);
+  }, true);
+
+  window.ExecutiveOSNavigation = { activate };
+})();
+
+// Optional feature modules are intentionally isolated so one rejection cannot stop this script.
+for (const modulePath of ['/notifications.js','/structured-display.js','/executive-memory.js','/executive-radar.js']) {
+  import(modulePath).catch(error => console.warn(`Optional module failed: ${modulePath}`, error));
+}
+
 (() => {
   const button = document.getElementById("voiceInput");
   const input = document.getElementById("aiInput");
