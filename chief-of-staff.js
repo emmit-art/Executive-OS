@@ -13,3 +13,4 @@ import './predictive-intelligence.js';
 import './execution-engine.js';
 import './executive-queue.js';
 import './delegation-center.js';
+import './relationship-intelligence.js';
