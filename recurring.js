@@ -42,6 +42,6 @@ document.addEventListener('DOMContentLoaded',()=>{
  document.addEventListener('click',async e=>{const day=e.target.closest('[data-auto-day]');if(day){const n=Number(day.dataset.autoDay);state.selectedDays.has(n)?state.selectedDays.delete(n):state.selectedDays.add(n);syncDayButtons();return;}const card=e.target.closest('[data-auto-id]'),action=e.target.closest('[data-auto-action]')?.dataset.autoAction;if(!card||!action)return;const a=state.items.find(x=>x.id===card.dataset.autoId);if(!a)return;try{if(action==='toggle')await update(a.id,{enabled:!a.enabled});if(action==='skip')await update(a.id,{next_run_at:nextOccurrence(a.cadence,a.weekdays||[],...String(a.local_time).slice(0,5).split(':').map(Number),new Date(a.next_run_at)).toISOString()});if(action==='edit'){const body=prompt('Reminder text',a.body);if(body===null)return;const time=prompt('Time (HH:MM)',String(a.local_time).slice(0,5));if(time===null)return;const[h,m]=time.split(':').map(Number);await update(a.id,{body:body.trim()||a.body,local_time:`${time}:00`,next_run_at:nextOccurrence(a.cadence,a.weekdays||[],h,m).toISOString()});}if(action==='delete'&&confirm('Delete this recurring automation?')){const{error}=await client.from('recurring_automations').delete().eq('id',a.id);if(error)throw error;await load();}}catch(err){msg(err.message,true);}});
  syncDayButtons();load();
 });
-document.addEventListener('click',intercept,true);
+window.addEventListener('click',intercept,true);
 window.CoffeeRunRecurring={scheduleFromText,load};
 })();
