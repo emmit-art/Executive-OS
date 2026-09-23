@@ -1,5 +1,7 @@
 (()=>{
   const THREAD_KEY="coffeeRunCoachThreadId";
+  const FUNCTION_URL="https://hnvvvdibncwlplweeuod.supabase.co/functions/v1/coach-proxy";
+  const PUBLISHABLE_KEY="sb_publishable_J-iF_-7VvAfXQKITPiNM_Q_cJUlokA1";
 
   function createThreadId(){
     if(globalThis.crypto?.randomUUID)return globalThis.crypto.randomUUID();
@@ -36,19 +38,51 @@
   async function sendMessage(message,options={}){
     const text=String(message??"").trim();
     if(!text)throw new Error("Enter a message first.");
+
     const client=options.client||window.coffeeRunSupabase;
-    if(!client?.functions?.invoke)throw new Error("Coffee Run is not connected to Supabase.");
+    if(!client?.auth?.getSession)throw new Error("Coffee Run is not connected to Supabase.");
+
+    const{data:sessionData,error:sessionError}=await client.auth.getSession();
+    if(sessionError)throw sessionError;
+    const accessToken=sessionData?.session?.access_token;
+    if(!accessToken)throw new Error("Your Coffee Run session expired. Sign out and back in.");
 
     const threadId=String(options.threadId||getThreadId());
-    const{data,error}=await client.functions.invoke("coach-proxy",{body:{
-      message:text,
-      thread_id:threadId,
-      input_type:options.inputType||"text",
-      source:options.source||"coffee_run"
-    }});
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),45000);
 
-    if(error)throw handleErrors(error);
-    return handleStatus(receiveReply(data));
+    try{
+      const response=await fetch(FUNCTION_URL,{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "apikey":PUBLISHABLE_KEY,
+          "Authorization":`Bearer ${accessToken}`
+        },
+        body:JSON.stringify({
+          message:text,
+          thread_id:threadId,
+          input_type:options.inputType||"text",
+          source:options.source||"coffee_run"
+        }),
+        signal:controller.signal
+      });
+
+      const raw=await response.text();
+      let data={};
+      try{data=raw?JSON.parse(raw):{}}catch{data={reply:raw,status:response.ok?"completed":"failed"}}
+
+      if(!response.ok){
+        throw new Error(data?.error||data?.message||`Coach request failed with status ${response.status}.`);
+      }
+
+      return handleStatus(receiveReply(data));
+    }catch(error){
+      if(error?.name==="AbortError")throw new Error("The Coach request timed out after 45 seconds.");
+      throw handleErrors(error);
+    }finally{
+      clearTimeout(timeout);
+    }
   }
 
   window.CoffeeRunCoach={sendMessage,receiveReply,handleStatus,handleErrors,getThreadId};
