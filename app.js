@@ -18,13 +18,15 @@ async function addWaiting(){const p=$('waitPerson').value.trim(),item=$('waitIte
 async function addNote(){const body=$('noteBody').value.trim();if(!body)return;const{error}=await client.from('notes').insert({owner_id:state.user.id,workspace_id:ws('second_brain'),title:$('noteTitle').value.trim()||null,body,note_type:'general'});if(error)return alert(error.message);$('noteTitle').value='';$('noteBody').value='';await load()}
 function renderCoachResult(data){
   const result=$('aiResult');if(!result)return;result.innerHTML='';
-  const reply=document.createElement('div');reply.className='coach-reply';
+  result.style.display='block';result.style.marginTop='14px';result.style.padding='16px';result.style.border='1px solid rgba(47,109,246,.22)';result.style.borderRadius='16px';result.style.background='rgba(255,255,255,.72)';result.style.color='#1f2a3d';result.style.fontSize='1rem';result.style.lineHeight='1.5';
+  const reply=document.createElement('div');reply.className='coach-reply';reply.style.whiteSpace='pre-wrap';
   reply.textContent=data?.reply||(
     data?.status==='needs_clarification'?'The Coach needs more information.':
     data?.status==='awaiting_approval'?'The Coach is waiting for your approval.':
     data?.status==='failed'?'The Coach could not complete that request.':'Done.'
   );
   result.appendChild(reply);
+  setTimeout(()=>result.scrollIntoView({behavior:'smooth',block:'center'}),0);
   if(data?.status==='needs_clarification')setTimeout(()=>$('aiInput')?.focus(),0);
   if(data?.requires_approval||data?.status==='awaiting_approval'){
     const actions=document.createElement('div');actions.className='coach-approval-actions';actions.style.display='flex';actions.style.gap='10px';actions.style.marginTop='12px';
@@ -47,13 +49,14 @@ async function sendCoachFollowup(message,source='coffee_run_followup'){
 async function saveCapture(process){
   const input=$('aiInput'),raw=input.value.trim();if(!raw||!state.user)return;
   const primary=$('aiSubmit'),secondary=$('aiInboxOnly');
-  if(primary)primary.disabled=true;if(secondary)secondary.disabled=true;msg('aiResult','Processing…');
+  if(primary){primary.disabled=true;primary.textContent='Processing…'}if(secondary)secondary.disabled=true;msg('aiResult','Processing…');
+  const result=$('aiResult');if(result){result.style.display='block';result.style.marginTop='14px';result.style.padding='14px';result.style.borderRadius='16px';result.style.background='rgba(255,255,255,.6)';setTimeout(()=>result.scrollIntoView({behavior:'smooth',block:'center'}),0)}
   try{
     if(!window.CoffeeRunCoach)throw new Error('Coach client is not loaded.');
     const data=await window.CoffeeRunCoach.sendMessage(raw,{client,inputType:'text',source:process?'coffee_run':'coffee_run_unsorted'});
     input.value='';renderCoachResult(data);
   }catch(error){msg('aiResult',error?.message||'Coffee Run could not reach the Coach.',true)}
-  finally{if(primary)primary.disabled=false;if(secondary)secondary.disabled=false}
+  finally{if(primary){primary.disabled=false;primary.textContent='Save & Organize'}if(secondary)secondary.disabled=false}
 }
 function tab(name){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===name));document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));$('menuBackdrop').classList.add('hidden');window.scrollTo({top:0,behavior:'smooth'})}
 function saveGoals(){const names=[...document.querySelectorAll('[data-goal-name]')],goals=names.map((n,i)=>({name:n.value.trim()||`Goal ${i+1}`,progress:Math.max(0,Math.min(100,Number(document.querySelector(`[data-goal-progress="${i}"]`)?.value)||0))}));localStorage.setItem('coffeeRunGoals',JSON.stringify(goals));renderGoals();msg('goalStatus','Goals saved.')}
