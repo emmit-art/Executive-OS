@@ -6,6 +6,12 @@
     const card=node('section');card.className='coach-approval';card.style.cssText='margin-top:12px;padding:14px;border:1px solid #9bb7e5;border-radius:12px;background:#f5f8ff;color:#1f2a3d;white-space:pre-wrap';
     card.dataset.actionId=a.id;
     card.append(node('strong',`Approval: ${a.status.replaceAll('_',' ')}`));
+    if(a.action_type==='send_email_dev'){
+      const email=a.proposed_changes||{};
+      for(const [label,key] of [['From','from'],['To','to'],['Subject','subject']])card.append(node('p',`${label}: ${email[key]??''}`));
+      const body=node('pre',email.body??'');body.style.whiteSpace='pre-wrap';body.style.overflowWrap='anywhere';card.append(body);
+      card.append(node('p',`Attachments: ${email.attachments?.length?email.attachments.map(x=>x.filename).join(', '):'None'}`));
+    }
     if(showProposal){card.append(node('p',a.proposal_text));const details=node('details');details.append(node('summary','Exact proposed changes'));details.append(node('pre',JSON.stringify(a.proposed_changes,null,2)));card.append(details);}
     card.append(node('p',`Action: ${a.action_type} · Expires: ${new Date(a.expires_at).toLocaleString()}`));
     if(a.status!=='pending'){
