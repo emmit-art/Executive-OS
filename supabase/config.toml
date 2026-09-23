@@ -1,0 +1,3 @@
+[functions.coach-proxy-dev]
+verify_jwt = false
+# The function verifies Authorization with auth.getUser() before all operations.
