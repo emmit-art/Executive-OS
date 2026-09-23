@@ -28,23 +28,8 @@ function renderCoachResult(data){
   result.appendChild(reply);
   setTimeout(()=>result.scrollIntoView({behavior:'smooth',block:'center'}),0);
   if(data?.status==='needs_clarification')setTimeout(()=>$('aiInput')?.focus(),0);
-  if(data?.requires_approval||data?.status==='awaiting_approval'){
-    const actions=document.createElement('div');actions.className='coach-approval-actions';actions.style.display='flex';actions.style.gap='10px';actions.style.marginTop='12px';
-    const approve=document.createElement('button');approve.type='button';approve.className='primary-button';approve.textContent='Approve';
-    const decline=document.createElement('button');decline.type='button';decline.className='secondary-button';decline.textContent='Decline';
-    const requestId=data?.request_id||'current';
-    approve.addEventListener('click',()=>sendCoachFollowup(`APPROVE request_id=${requestId}`,'coffee_run_approval'));
-    decline.addEventListener('click',()=>sendCoachFollowup(`DECLINE request_id=${requestId}`,'coffee_run_approval'));
-    actions.append(approve,decline);result.appendChild(actions);
-  }
-}
-async function sendCoachFollowup(message,source='coffee_run_followup'){
-  const result=$('aiResult');if(result){result.textContent='Processing…';result.style.color=''}
-  try{
-    if(!window.CoffeeRunCoach)throw new Error('Coach client is not loaded.');
-    const data=await window.CoffeeRunCoach.sendMessage(message,{client,inputType:'text',source});
-    renderCoachResult(data);return data;
-  }catch(error){msg('aiResult',error?.message||'Coffee Run could not reach the Coach.',true);return null}
+  if(data?.approval)window.CoffeeRunApprovals?.render(data.approval,result);
+  window.CoffeeRunApprovals?.refresh();
 }
 async function saveCapture(process){
   const input=$('aiInput'),raw=input.value.trim();if(!raw||!state.user)return;

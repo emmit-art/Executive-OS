@@ -1,6 +1,6 @@
 (()=>{
   const THREAD_KEY="coffeeRunCoachThreadId";
-  const FUNCTION_URL="https://hnvvvdibncwlplweeuod.supabase.co/functions/v1/coach-proxy";
+  const FUNCTION_URL="https://hnvvvdibncwlplweeuod.supabase.co/functions/v1/coach-proxy-dev";
   const PUBLISHABLE_KEY="sb_publishable_J-iF_-7VvAfXQKITPiNM_Q_cJUlokA1";
 
   function createThreadId(){
@@ -25,7 +25,7 @@
 
   function handleStatus(data){
     const allowed=new Set(["received","processing","needs_clarification","awaiting_approval","completed","failed"]);
-    const status=allowed.has(data?.status)?data.status:"completed";
+    const status=allowed.has(data?.status)?data.status:"failed";
     return{...data,status,requires_approval:Boolean(data?.requires_approval||status==="awaiting_approval")};
   }
 
@@ -35,9 +35,7 @@
     return new Error(String(message));
   }
 
-  async function sendMessage(message,options={}){
-    const text=String(message??"").trim();
-    if(!text)throw new Error("Enter a message first.");
+  async function invoke(payload,options={}){
 
     const client=options.client||window.coffeeRunSupabase;
     if(!client?.auth?.getSession)throw new Error("Coffee Run is not connected to Supabase.");
@@ -59,24 +57,19 @@
           "apikey":PUBLISHABLE_KEY,
           "Authorization":`Bearer ${accessToken}`
         },
-        body:JSON.stringify({
-          message:text,
-          thread_id:threadId,
-          input_type:options.inputType||"text",
-          source:options.source||"coffee_run"
-        }),
+        body:JSON.stringify({...payload,thread_id:threadId}),
         signal:controller.signal
       });
 
       const raw=await response.text();
       let data={};
-      try{data=raw?JSON.parse(raw):{}}catch{data={reply:raw,status:response.ok?"completed":"failed"}}
+      try{data=JSON.parse(raw)}catch{throw new Error("The Coach returned an invalid response.")}
 
       if(!response.ok){
         throw new Error(data?.error||data?.message||`Coach request failed with status ${response.status}.`);
       }
 
-      return handleStatus(receiveReply(data));
+      return data.approvals ? data : handleStatus(receiveReply(data));
     }catch(error){
       if(error?.name==="AbortError")throw new Error("The Coach request timed out after 45 seconds.");
       throw handleErrors(error);
@@ -85,5 +78,13 @@
     }
   }
 
-  window.CoffeeRunCoach={sendMessage,receiveReply,handleStatus,handleErrors,getThreadId};
+  async function sendMessage(message,options={}){
+    const text=String(message??'').trim();
+    if(!text)throw new Error('Enter a message first.');
+    return invoke({operation:'message',message:text},options);
+  }
+  const decide=(approval,decision,options={})=>invoke({operation:'decision',action_id:approval.id,proposal_hash:approval.proposal_hash,decision},options);
+  const listApprovals=(options={})=>invoke({operation:'list_approvals'},options);
+  const diagnostic=(outcome,options={})=>invoke({operation:'diagnostic',outcome},options);
+  window.CoffeeRunCoach={sendMessage,decide,listApprovals,diagnostic,receiveReply,handleStatus,handleErrors,getThreadId};
 })();
