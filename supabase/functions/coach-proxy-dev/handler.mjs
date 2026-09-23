@@ -60,6 +60,14 @@ export function createHandler({createClient,env,fetchImpl=fetch}) {
         if(!upstream.ok)throw new Error(`The Coach connection failed (HTTP ${upstream.status}).`);
         result=normalizeMakeResponse(await upstream.text(),requestId,threadId);
       }
+      if(result.status==='awaiting_approval'&&['send_email','send_email_dev'].includes(result.action_type)){
+        // Model output is a proposal, never authority to send. Validate and freeze
+        // exact content in the same transaction as the approval record.
+        const email=buildEmail(result.proposed_changes.email,requestId);
+        const {data,error}=await admin.rpc('coach_prepare_request_email_dev',{p_owner:user.id,p_request:requestId,p_payload:email.payload,p_raw:email.raw});
+        if(error)throw new Error('Could not save the Coach email proposal. Nothing was queued for sending.');
+        return json(data);
+      }
       const {data,error}=await admin.rpc('coach_finalize_request',{p_owner:user.id,p_request:requestId,p_status:result.status,p_reply:result.reply,p_action_type:result.action_type,p_changes:result.proposed_changes,p_record_ids:result.record_ids});
       if(error)throw new Error('Could not save the Coach result. Check records before retrying.');
       return json(data);
