@@ -1,4 +1,5 @@
 import {normalizeMakeResponse,validateDecision} from './contract.mjs';
+import {buildEmail} from './email.mjs';
 const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'};
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{...cors,'Content-Type':'application/json'}});
 export function createHandler({createClient,env,fetchImpl=fetch}) {
@@ -19,6 +20,13 @@ export function createHandler({createClient,env,fetchImpl=fetch}) {
       let body;try{body=await req.json()}catch{return json({error:'Invalid JSON request.'},400)}
       if(!body||typeof body!=='object'||Array.isArray(body))return json({error:'Invalid request.'},400);
       const op=body.operation ?? 'message';
+      if(op==='prepare_email'){
+        let email;
+        try{email=buildEmail(body.email,crypto.randomUUID())}catch(e){return json({error:e.message},400)}
+        const {data,error}=await admin.rpc('coach_prepare_email',{p_owner:user.id,p_thread:String(body.thread_id??crypto.randomUUID()).slice(0,256),p_payload:email.payload,p_raw:email.raw});
+        if(error)return json({error:'Could not save the personal development email proposal.'},error.code==='42501'?403:500);
+        return json(data);
+      }
       if(op==='decision'){
         try{validateDecision(body)}catch(e){return json({error:e.message},400)}
         const {data,error}=await admin.rpc('coach_decide_action',{p_owner:user.id,p_action:body.action_id,p_hash:body.proposal_hash,p_decision:body.decision});

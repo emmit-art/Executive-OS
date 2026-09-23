@@ -1,0 +1,31 @@
+begin;
+do $$
+declare o uuid:='2192567a-41fd-435e-ad66-75bdc5101f28'; r jsonb; a uuid; h text; c jsonb; p jsonb:='{"from":"emmit.atkins@gmail.com","to":"emmit.atkins@gmail.com","sender_account":"personal_gmail_dev","subject":"Test","body":"Test","attachments":[]}';
+begin
+ r=public.coach_prepare_email(o,'sql-email-test',p,'TEST_RAW');a=(r->'approval'->>'id')::uuid;h=r->'approval'->>'proposal_hash';
+ if public.coach_claim_email_dev()->>'claimed'<>'false' then raise exception 'Unapproved email claimed';end if;
+ begin perform public.coach_decide_action(gen_random_uuid(),a,h,'approve');raise exception 'Wrong owner accepted';exception when no_data_found then null;end;
+ begin perform public.coach_decide_action(o,a,repeat('0',64),'approve');raise exception 'Wrong hash accepted';exception when invalid_parameter_value then null;end;
+ r=public.coach_decide_action(o,a,h,'approve');if r->'approval'->>'execution_status'<>'queued' then raise exception 'Not queued';end if;
+ r=public.coach_decide_action(o,a,h,'approve');if r->>'idempotent_replay'<>'true' then raise exception 'Not idempotent';end if;
+ c=public.coach_claim_email_dev();if c->>'action_id'<>a::text or c->>'raw'<>'TEST_RAW' then raise exception 'Wrong snapshot';end if;
+ if public.coach_claim_email_dev()->>'claimed'<>'false' then raise exception 'Double claim';end if;
+ perform public.coach_finish_email_dev(a,(c->>'claim_id')::uuid,'test_provider_id','{"test":true}');
+ if public.coach_finish_email_dev(a,(c->>'claim_id')::uuid,'test_provider_id','{}')->>'idempotent_replay'<>'true' then raise exception 'Duplicate receipt';end if;
+ r=public.coach_prepare_email(o,'sql-email-test',p,'TEST_RAW');a=(r->'approval'->>'id')::uuid;h=r->'approval'->>'proposal_hash';
+ perform public.coach_decide_action(o,a,h,'decline');perform public.coach_decide_action(o,a,h,'approve');
+ if public.coach_claim_email_dev()->>'claimed'<>'false' then raise exception 'Declined claimed';end if;
+ r=public.coach_prepare_email(o,'sql-email-test',p,'TEST_RAW');a=(r->'approval'->>'id')::uuid;h=r->'approval'->>'proposal_hash';
+ update public.assistant_actions set expires_at=now()-interval '1 minute' where id=a;
+ r=public.coach_decide_action(o,a,h,'approve');if r->'approval'->>'status'<>'expired' then raise exception 'Expiry not enforced';end if;
+ if public.coach_claim_email_dev()->>'claimed'<>'false' then raise exception 'Expired claimed';end if;
+ r=public.coach_prepare_email(o,'sql-email-error',p,'TEST_RAW');a=(r->'approval'->>'id')::uuid;h=r->'approval'->>'proposal_hash';
+ perform public.coach_decide_action(o,a,h,'approve');c=public.coach_claim_email_dev();
+ perform public.coach_email_error_dev(a,(c->>'claim_id')::uuid,'Controlled timeout test');
+ if public.coach_claim_email_dev()->>'claimed'<>'false' then raise exception 'Unknown send retried';end if;
+ if not exists(select 1 from public.assistant_action_events where action_id=a and event_type='email_provider_error') then raise exception 'Failure audit missing';end if;
+ if not exists(select 1 from public.assistant_actions where id=a and execution_status='outcome_unknown' and error_message like '%Controlled timeout test%') then raise exception 'Failure not visible';end if;
+ if has_function_privilege('authenticated','public.coach_claim_email_dev()','EXECUTE') or has_table_privilege('authenticated','public.coach_email_dispatch','INSERT') then raise exception 'Unsafe grants';end if;
+end $$;
+select 'email guards passed; fixtures rolled back' as result;
+rollback;

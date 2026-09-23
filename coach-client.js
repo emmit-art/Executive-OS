@@ -86,5 +86,6 @@
   const decide=(approval,decision,options={})=>invoke({operation:'decision',action_id:approval.id,proposal_hash:approval.proposal_hash,decision},options);
   const listApprovals=(options={})=>invoke({operation:'list_approvals'},options);
   const diagnostic=(outcome,options={})=>invoke({operation:'diagnostic',outcome},options);
-  window.CoffeeRunCoach={sendMessage,decide,listApprovals,diagnostic,receiveReply,handleStatus,handleErrors,getThreadId};
+  const prepareEmail=(email,options={})=>invoke({operation:'prepare_email',email},options);
+  window.CoffeeRunCoach={sendMessage,decide,listApprovals,diagnostic,prepareEmail,receiveReply,handleStatus,handleErrors,getThreadId};
 })();
