@@ -2,12 +2,12 @@
 
 ## Current state
 
-Development implementation is ready for hosted UI verification. It is **not ready for production promotion or external action execution**.
+Development implementation is published and hosted approval UI verification passed. It is **not ready for production promotion or external action execution**.
 
 - Branch: `make-coach-integration`; draft PR: https://github.com/emmit-art/Executive-OS/pull/2
 - New `coach-proxy-dev` is deployed. Existing `coach-proxy` is unchanged.
 - Additive `durable_coach_approvals` database migration is applied. SQL source is `supabase/schema/durable_approvals.sql`.
-- Frontend changes are committed locally but have not been pushed. Automatic approval review rejected the GitHub push, requesting explicit authorization for publishing source to that remote. Do not use another channel to bypass that rejection.
+- User explicitly authorized publication. The connected GitHub app published commit `5fbfc308cd4ba7e65756a63509f5494f98ec9a46`; its tree matches local commit `9afd00f` exactly. Both Vercel preview checks succeeded. Command-line Git had no credentials. Production was not merged or promoted.
 - Make scenario 6366774 has a saved status router after Agent 1: completed → Response 11; needs_clarification → Response 13; awaiting_approval → Response 14; fallback failed_or_invalid → Response 15. The fallback preserves the response; the development proxy rejects malformed/unknown contracts.
 
 ## What is implemented
@@ -33,12 +33,12 @@ Only local, side-effect-free success/failure diagnostic executors exist. Approvi
 | Make clarification replay | needs_clarification route selected; other routes rejected |
 | Controlled failed-status prompt | Preview displayed failure; request f3f7c951-f969-4330-b0f7-c05e1c88f3f1 persisted as failed, requires_approval=false |
 | Executive object count after route tests | Unchanged at 2 |
-| Hosted new approval UI | Pending branch push and preview deployment |
+| Hosted new approval UI | Passed: reload persistence, approval success, decline with zero attempts, controlled failure feedback, database result verification |
 
 ## Remaining release gates
 
-1. Explicit authorization to push this branch to `emmit-art/Executive-OS`, then inspect the new preview deployment.
-2. In the authenticated preview, verify proposal → refresh → approve/decline, duplicate clicks, persisted history, and controlled failure feedback.
+1. Development publication and hosted preview checks are complete.
+2. Database duplicate and concurrent decision tests passed; successful UI approval records show one attempt, declined records zero attempts.
 3. Before real external execution: implement a typed executor with complete machine-readable proposal fields (recipient/subject/body or event details), provider idempotency, durable dispatch/reconciliation and sandbox integration tests. A Make summary alone is not a sufficient executable payload.
 4. Review the existing agent record-write tool boundaries and database security findings before promotion. Contract validation after a tool call cannot undo an earlier write.
 5. Separate explicit production merge/deployment approval.
