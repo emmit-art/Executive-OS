@@ -49,7 +49,7 @@ The success receipt is deliberately a device submission, not a claim that iCloud
 {"outcome":"submitted_to_device","provider":"apple_ios","device":"Emmit iPhone – Coffee Run DEV","confirmation_required":true}
 ```
 
-`coach_finish_calendar_dev` records this receipt while retaining `outcome_unknown` and a consumed claim. A confirmed provider ID is required for the separate `created` state. No invented event IDs or automatic resend are allowed. A phone-confirmation workflow is still pending.
+`coach_finish_calendar_dev` records this receipt while retaining `outcome_unknown` and a consumed claim. A confirmed provider ID is required for the separate `created` state. No invented event IDs or automatic resend are allowed. The authenticated owner can use Confirm seen in Family Calendar after checking the phone; this records user confirmation without inventing a provider event ID.
 
 ## Verification checkpoint — September 28, 2026
 
@@ -67,3 +67,11 @@ The success receipt is deliberately a device submission, not a claim that iCloud
 - Preview branch published at `0ce65727f9a77bb423d8765e361552e43d1e9710`; Vercel checks succeeded. Production branch and draft PR remain unchanged.
 - Signed-in preview successfully prepared one pending proposal through `coach-proxy-dev`: Coffee Run calendar approval test 001, September 29, 2026, noon to 12:15 p.m. Eastern; stored timestamps 16:00–16:15 UTC. No location or notes; timed event.
 - Approval card displays Eastern dates with the zone; exact frozen JSON remains expandable. Do not prepare another proposal or run Make until Emmit reviews this one. After approval, run scenario 6388946 once, then ask Emmit to sync the Make app and verify exactly one Family Calendar event.
+
+## Completed September 28 evening
+
+- Make ran the approved test once at 22:33 Eastern, saved submitted_to_device, attempts=1. Emmit confirmed it appeared in Family Calendar at 22:37.
+- Added service-only owner-bound `coach_confirm_calendar_dev`, dev proxy operation, and the approval-card confirmation button. Deployed dev proxy v6 with JWT verification retained. Verified wrong-owner and premature rejection, idempotent replay, and unchanged send attempt count. All 42 Node tests passed.
+- Used the hosted confirmation button to record Emmit’s report. Action `5e2be83f-f69b-4c62-b447-d89683f9e1a0` is now succeeded, with confirmation_source=user and no fabricated provider ID. Confirmation is historical even if Emmit deletes the test event.
+- Normal AI chat test passed through the Make agent and produced a frozen calendar approval: Coffee Run chat calendar test, September 30, 2026, 12:00–12:15 Eastern, no notes or location. It remains pending and has not been dispatched. Do not approve or run it without Emmit’s explicit request.
+- Calendar scenario remains inactive. Next milestone: specialist-agent integration and combined Chief of Staff briefings; keep development branch isolated.
