@@ -38,3 +38,12 @@ for(const [name,email] of Object.entries({missing:undefined,external:{...emailPr
  const x=setup({fetchImpl:async()=>new Response(JSON.stringify(emailResponse(email)))});
  assert.equal((await x.request({message:'Draft my email',thread_id:'thread-1'})).status,502);assert.equal(x.calls.length,1);assert.equal(x.updates[0].status,'failed');
 });
+test('calendar confirmation uses verified owner and never calls Make',async()=>{
+ const x=setup({fetchImpl:()=>{throw Error('must not call')}});
+ const action='12345678-1234-1234-1234-123456789abc';
+ assert.equal((await x.request({operation:'confirm_calendar',action_id:action,owner_id:'attacker'})).status,200);
+ assert.deepEqual(x.calls,[{name:'coach_confirm_calendar_dev',args:{p_owner:'verified-owner',p_action:action}}]);
+});
+test('invalid calendar confirmation is rejected before database writes',async()=>{
+ const x=setup();assert.equal((await x.request({operation:'confirm_calendar',action_id:'bad'})).status,400);assert.equal(x.calls.length,0);
+});

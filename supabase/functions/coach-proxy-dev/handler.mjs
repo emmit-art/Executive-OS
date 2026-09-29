@@ -21,6 +21,12 @@ export function createHandler({createClient,env,fetchImpl=fetch}) {
       let body;try{body=await req.json()}catch{return json({error:'Invalid JSON request.'},400)}
       if(!body||typeof body!=='object'||Array.isArray(body))return json({error:'Invalid request.'},400);
       const op=body.operation ?? 'message';
+      if(op==='confirm_calendar'){
+        if(typeof body.action_id!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.action_id))return json({error:'Invalid calendar action.'},400);
+        const {data,error}=await admin.rpc('coach_confirm_calendar_dev',{p_owner:user.id,p_action:body.action_id});
+        if(error)return json({error:error.code==='P0002'?'Calendar approval not found.':error.code==='22023'?'This event has not been submitted to the phone.':'Could not save calendar confirmation.'},error.code==='P0002'?404:error.code==='22023'?409:500);
+        return json(data);
+      }
       if(op==='prepare_email'){
         let email;
         try{email=buildEmail(body.email,crypto.randomUUID())}catch(e){return json({error:e.message},400)}

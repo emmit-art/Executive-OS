@@ -22,6 +22,11 @@
     if(showProposal){card.append(node('p',a.proposal_text));const details=node('details');details.append(node('summary','Exact proposed changes'));details.append(node('pre',JSON.stringify(a.proposed_changes,null,2)));card.append(details);}
     card.append(node('p',`Action: ${a.action_type} · Expires: ${a.action_type==='create_calendar_event_dev'?easternTime(a.expires_at):new Date(a.expires_at).toLocaleString()}`));
     if(a.status!=='pending'){
+      if(a.action_type==='create_calendar_event_dev'&&a.execution_status==='outcome_unknown'&&a.result?.outcome==='submitted_to_device'){
+        const confirm=node('button','Confirm seen in Family Calendar');confirm.type='button';confirm.className='secondary-button';
+        confirm.addEventListener('click',async()=>{confirm.disabled=true;try{await window.CoffeeRunCoach.confirmCalendar(a);await refresh();}catch(e){card.append(node('p',e.message));confirm.disabled=false;}});card.append(confirm);
+      }
+      if(a.result?.confirmation_source==='user')card.append(node('p','Confirmed by you after checking Family Calendar.'));
       card.append(node('p',a.error_message || (a.status==='declined'?'Declined. Nothing was executed.':a.status==='expired'?'Approval expired. Nothing was executed.':a.execution_status==='succeeded'?(a.action_type==='send_email_dev'?`Email sent. Message ID: ${a.result?.message_id}`:a.action_type==='create_calendar_event_dev'?'Calendar event created.':'Diagnostic completed once. No external action was performed.'):a.execution_status==='queued'?(a.action_type==='create_calendar_event_dev'?'Approved and queued. Run the calendar executor, then refresh approvals.':'Approved and queued. Refresh approvals to check delivery.'):`Execution: ${a.execution_status}`)));
     }else if(new Date(a.expires_at)<=new Date()){
       card.append(node('p','This proposal has expired. Ask the Coach for a new proposal.'));
