@@ -2,6 +2,7 @@
   let panel, list, loading=false;
   const inFlight=new Set();
   const node=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
+  const easternTime=value=>new Date(value).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
   function render(a,host,showProposal=false){
     const card=node('section');card.className='coach-approval';card.style.cssText='margin-top:12px;padding:14px;border:1px solid #9bb7e5;border-radius:12px;background:#f5f8ff;color:#1f2a3d;white-space:pre-wrap';
     card.dataset.actionId=a.id;
@@ -14,12 +15,12 @@
     }
     if(a.action_type==='create_calendar_event_dev'){
       const event=a.proposed_changes?.calendar||a.proposed_changes||{};
-      for(const [label,key] of [['Calendar','calendar_account'],['Title','title'],['Start','start_at'],['End','end_at'],['Timezone','timezone'],['Location','location']])card.append(node('p',`${label}: ${event[key]??''}`));
+      for(const [label,key] of [['Calendar','calendar_account'],['Title','title'],['Start','start_at'],['End','end_at'],['Timezone','timezone'],['Location','location']])card.append(node('p',`${label}: ${['start_at','end_at'].includes(key)&&event[key]?easternTime(event[key]):event[key]??''}`));
       card.append(node('p',`All day: ${event.all_day?'Yes':'No'}`));
       if(event.notes)card.append(node('pre',event.notes));
     }
     if(showProposal){card.append(node('p',a.proposal_text));const details=node('details');details.append(node('summary','Exact proposed changes'));details.append(node('pre',JSON.stringify(a.proposed_changes,null,2)));card.append(details);}
-    card.append(node('p',`Action: ${a.action_type} · Expires: ${new Date(a.expires_at).toLocaleString()}`));
+    card.append(node('p',`Action: ${a.action_type} · Expires: ${a.action_type==='create_calendar_event_dev'?easternTime(a.expires_at):new Date(a.expires_at).toLocaleString()}`));
     if(a.status!=='pending'){
       card.append(node('p',a.error_message || (a.status==='declined'?'Declined. Nothing was executed.':a.status==='expired'?'Approval expired. Nothing was executed.':a.execution_status==='succeeded'?(a.action_type==='send_email_dev'?`Email sent. Message ID: ${a.result?.message_id}`:a.action_type==='create_calendar_event_dev'?'Calendar event created.':'Diagnostic completed once. No external action was performed.'):a.execution_status==='queued'?(a.action_type==='create_calendar_event_dev'?'Approved and queued. Run the calendar executor, then refresh approvals.':'Approved and queued. Refresh approvals to check delivery.'):`Execution: ${a.execution_status}`)));
     }else if(new Date(a.expires_at)<=new Date()){

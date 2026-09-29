@@ -61,3 +61,9 @@ The success receipt is deliberately a device submission, not a claim that iCloud
 - Node verification: 40 calendar, Coach, and email tests passed, including Eastern summer/winter conversion and invalid or ambiguous local times.
 - Supabase advisors: no security finding on the calendar objects. An informational [missing owner foreign-key index](https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys) is deferred for this single-user development queue. Unrelated existing push/recurrence function access and search-path warnings, password-protection settings, and broader performance findings were not changed in this milestone; review them before production rollout.
 - No live approval-gated event has run yet. Next: prepare one timed proposal, have Emmit review and approve it, run the executor once, then sync Make on the iPhone and verify exactly one event in Family Calendar.
+
+## Hosted preview checkpoint
+
+- Preview branch published at `0ce65727f9a77bb423d8765e361552e43d1e9710`; Vercel checks succeeded. Production branch and draft PR remain unchanged.
+- Signed-in preview successfully prepared one pending proposal through `coach-proxy-dev`: Coffee Run calendar approval test 001, September 29, 2026, noon to 12:15 p.m. Eastern; stored timestamps 16:00–16:15 UTC. No location or notes; timed event.
+- Approval card displays Eastern dates with the zone; exact frozen JSON remains expandable. Do not prepare another proposal or run Make until Emmit reviews this one. After approval, run scenario 6388946 once, then ask Emmit to sync the Make app and verify exactly one Family Calendar event.
