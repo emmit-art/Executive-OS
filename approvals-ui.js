@@ -12,10 +12,16 @@
       const body=node('pre',email.body??'');body.style.whiteSpace='pre-wrap';body.style.overflowWrap='anywhere';card.append(body);
       card.append(node('p',`Attachments: ${email.attachments?.length?email.attachments.map(x=>x.filename).join(', '):'None'}`));
     }
+    if(a.action_type==='create_calendar_event_dev'){
+      const event=a.proposed_changes?.calendar||a.proposed_changes||{};
+      for(const [label,key] of [['Calendar','calendar_account'],['Title','title'],['Start','start_at'],['End','end_at'],['Timezone','timezone'],['Location','location']])card.append(node('p',`${label}: ${event[key]??''}`));
+      card.append(node('p',`All day: ${event.all_day?'Yes':'No'}`));
+      if(event.notes)card.append(node('pre',event.notes));
+    }
     if(showProposal){card.append(node('p',a.proposal_text));const details=node('details');details.append(node('summary','Exact proposed changes'));details.append(node('pre',JSON.stringify(a.proposed_changes,null,2)));card.append(details);}
     card.append(node('p',`Action: ${a.action_type} · Expires: ${new Date(a.expires_at).toLocaleString()}`));
     if(a.status!=='pending'){
-      card.append(node('p',a.error_message || (a.status==='declined'?'Declined. Nothing was executed.':a.execution_status==='succeeded'?(a.action_type==='send_email_dev'?`Email sent. Message ID: ${a.result?.message_id}`:'Diagnostic completed once. No external action was performed.'):a.execution_status==='queued'?'Approved and queued. Refresh approvals to check delivery.':`Execution: ${a.execution_status}`)));
+      card.append(node('p',a.error_message || (a.status==='declined'?'Declined. Nothing was executed.':a.status==='expired'?'Approval expired. Nothing was executed.':a.execution_status==='succeeded'?(a.action_type==='send_email_dev'?`Email sent. Message ID: ${a.result?.message_id}`:a.action_type==='create_calendar_event_dev'?'Calendar event created.':'Diagnostic completed once. No external action was performed.'):a.execution_status==='queued'?(a.action_type==='create_calendar_event_dev'?'Approved and queued. Run the calendar executor, then refresh approvals.':'Approved and queued. Refresh approvals to check delivery.'):`Execution: ${a.execution_status}`)));
     }else if(new Date(a.expires_at)<=new Date()){
       card.append(node('p','This proposal has expired. Ask the Coach for a new proposal.'));
     }else{
@@ -62,6 +68,15 @@
     const prepare=node('button','Prepare email proposal');prepare.type='button';prepare.className='secondary-button';
     prepare.addEventListener('click',async()=>{prepare.disabled=true;try{const data=await window.CoffeeRunCoach.prepareEmail({sender_account:'personal_gmail_dev',from:'emmit.atkins@gmail.com',to:'emmit.atkins@gmail.com',subject:subject.value,body:body.value,attachments:[]});target.replaceChildren(node('p',data.reply));render(data.approval,target,true);await refresh();}catch(e){target.textContent=e.message;}finally{prepare.disabled=false;}});
     emailForm.append(subject,body,prepare);diagnostics.after(emailForm);
+    const calendarForm=node('details');calendarForm.style.marginTop='14px';calendarForm.append(node('summary','Family calendar development test'));
+    calendarForm.append(node('p','Prepare a timed event for your iPhone Family Calendar. All times below are Eastern (America/New_York). This test supports a title, time, and location. Review and approve the proposal before running Make.'));
+    const title=node('input');title.type='text';title.className='field';title.placeholder='Event title';title.setAttribute('aria-label','Calendar event title');title.maxLength=300;
+    const start=node('input');start.type='datetime-local';start.className='field';start.setAttribute('aria-label','Calendar event start');
+    const end=node('input');end.type='datetime-local';end.className='field';end.setAttribute('aria-label','Calendar event end');
+    const location=node('input');location.type='text';location.className='field';location.placeholder='Location (optional)';location.maxLength=500;
+    const prepareCalendar=node('button','Prepare calendar proposal');prepareCalendar.type='button';prepareCalendar.className='secondary-button';
+    prepareCalendar.addEventListener('click',async()=>{prepareCalendar.disabled=true;try{const {newYorkTimeToISO}=await import('./calendar-time.mjs');const data=await window.CoffeeRunCoach.prepareCalendar({calendar_account:'personal_icloud_family',title:title.value,start_at:newYorkTimeToISO(start.value),end_at:newYorkTimeToISO(end.value),timezone:'America/New_York',location:location.value,notes:'',all_day:false});target.replaceChildren(node('p',data.reply));render(data.approval,target,true);await refresh();}catch(e){target.textContent=e.message;}finally{prepareCalendar.disabled=false;}});
+    calendarForm.append(title,node('p','Start — Eastern time'),start,node('p','End — Eastern time'),end,location,prepareCalendar);emailForm.after(calendarForm);
   });
   window.CoffeeRunApprovals={render,refresh};
 })();

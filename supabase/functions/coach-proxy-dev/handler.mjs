@@ -1,5 +1,6 @@
 import {normalizeMakeResponse,validateDecision} from './contract.mjs';
 import {buildEmail} from './email.mjs';
+import {validateCalendar} from './calendar.mjs';
 const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS'};
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{...cors,'Content-Type':'application/json'}});
 export function createHandler({createClient,env,fetchImpl=fetch}) {
@@ -27,9 +28,21 @@ export function createHandler({createClient,env,fetchImpl=fetch}) {
         if(error)return json({error:'Could not save the personal development email proposal.'},error.code==='42501'?403:500);
         return json(data);
       }
+      if(op==='prepare_calendar'){
+        let calendar;
+        try{calendar=validateCalendar(body.calendar)}catch(e){return json({error:e.message},400)}
+        const {data:created,error:insertError}=await admin.from('assistant_requests').insert({owner_id:user.id,thread_id:String(body.thread_id??crypto.randomUUID()).slice(0,256),message:'Personal development calendar proposal',input_type:'text',source:'coffee_run_calendar_dev',status:'processing'}).select('id').single();
+        if(insertError||!created)return json({error:'Could not record the calendar request.'},500);
+        const {data,error}=await admin.rpc('coach_prepare_request_calendar_dev',{p_owner:user.id,p_request:created.id,p_payload:calendar});
+        if(error)return json({error:'Could not save the personal development calendar proposal.'},error.code==='42501'?403:500);
+        return json(data);
+      }
       if(op==='decision'){
         try{validateDecision(body)}catch(e){return json({error:e.message},400)}
-        const {data,error}=await admin.rpc('coach_decide_action',{p_owner:user.id,p_action:body.action_id,p_hash:body.proposal_hash,p_decision:body.decision});
+        const {data:action,error:actionError}=await admin.from('assistant_actions').select('action_type').eq('id',body.action_id).eq('owner_id',user.id).maybeSingle();
+        if(actionError)return json({error:'Could not load the approval.'},500);
+        const rpcName=action?.action_type==='create_calendar_event_dev'?'coach_decide_calendar_action_dev':'coach_decide_action';
+        const {data,error}=await admin.rpc(rpcName,{p_owner:user.id,p_action:body.action_id,p_hash:body.proposal_hash,p_decision:body.decision});
         if(error)return json({error:error.code==='P0002'?'Approval not found.':error.code==='22023'?'The approval is stale or invalid. Reload it before deciding.':'Could not save the approval decision.'},error.code==='P0002'?404:error.code==='22023'?409:500);
         return json(data);
       }
@@ -66,6 +79,12 @@ export function createHandler({createClient,env,fetchImpl=fetch}) {
         const email=buildEmail(result.proposed_changes.email,requestId);
         const {data,error}=await admin.rpc('coach_prepare_request_email_dev',{p_owner:user.id,p_request:requestId,p_payload:email.payload,p_raw:email.raw});
         if(error)throw new Error('Could not save the Coach email proposal. Nothing was queued for sending.');
+        return json(data);
+      }
+      if(result.status==='awaiting_approval'&&['create_calendar_event','create_calendar_event_dev'].includes(result.action_type)){
+        const calendar=validateCalendar(result.proposed_changes.calendar);
+        const {data,error}=await admin.rpc('coach_prepare_request_calendar_dev',{p_owner:user.id,p_request:requestId,p_payload:calendar});
+        if(error)throw new Error('Could not save the Coach calendar proposal. Nothing was queued for creation.');
         return json(data);
       }
       const {data,error}=await admin.rpc('coach_finalize_request',{p_owner:user.id,p_request:requestId,p_status:result.status,p_reply:result.reply,p_action_type:result.action_type,p_changes:result.proposed_changes,p_record_ids:result.record_ids});
